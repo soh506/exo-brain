@@ -1,0 +1,21 @@
+{
+  "name": "external-brain-cdk",
+  "version": "0.1.0",
+  "bin": {
+    "external-brain": "bin/external-brain.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "aws-cdk": "2.1119.0",
+    "typescript": "~5.6.0",
+    "@types/node": "22.10.2"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.250.0",
+    "constructs": "^10.0.0"
+  }
+}
