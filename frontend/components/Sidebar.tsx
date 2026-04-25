@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Conversation, listConversations, deleteConversation, updateTitle } from "@/lib/api";
+import { Conversation, listConversations, deleteConversation, updateTitle, getConversation } from "@/lib/api";
 
 export default function Sidebar() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -15,20 +15,34 @@ export default function Sidebar() {
   const searchParams = useSearchParams();
   const currentId = searchParams.get("id");
 
-  const load = async () => {
-    try {
-      const data = await listConversations();
-      setConversations(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 初回のみ全件取得
   useEffect(() => {
-    load();
-  }, [currentId]);
+    listConversations()
+      .then(setConversations)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  // currentIdが変わったとき、未知のIDなら会話を追加する（新規会話作成後）
+  useEffect(() => {
+    if (!currentId) return;
+    const exists = conversations.some((c) => c.conversation_id === currentId);
+    if (exists) return;
+
+    getConversation(currentId)
+      .then((conv) => {
+        setConversations((prev) => [
+          {
+            conversation_id: conv.conversation_id,
+            title: conv.title || "無題",
+            updated_at: conv.updated_at,
+            message_count: (conv.messages ?? []).length,
+          },
+          ...prev,
+        ]);
+      })
+      .catch(console.error);
+  }, [currentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (editingId) editInputRef.current?.focus();
@@ -52,13 +66,12 @@ export default function Sidebar() {
 
   const commitEdit = async (id: string) => {
     const title = editingTitle.trim();
-    if (title) {
-      await updateTitle(id, title).catch(console.error);
-      setConversations((prev) =>
-        prev.map((c) => (c.conversation_id === id ? { ...c, title } : c))
-      );
-    }
     setEditingId(null);
+    if (!title) return;
+    setConversations((prev) =>
+      prev.map((c) => (c.conversation_id === id ? { ...c, title } : c))
+    );
+    await updateTitle(id, title).catch(console.error);
   };
 
   const handleEditKeyDown = (e: React.KeyboardEvent, id: string) => {
