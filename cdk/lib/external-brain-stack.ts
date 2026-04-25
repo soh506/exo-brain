@@ -42,7 +42,7 @@ export class ExternalBrainStack extends cdk.Stack {
             tryBundle(outputDir: string) {
               const srcDir = path.join(__dirname, "../../backend/chat");
               execSync(
-                `pip3 install -r requirements.txt -t ${outputDir} --quiet && cp -r ${srcDir}/. ${outputDir}`,
+                `pip3 install -r ${srcDir}/requirements.txt -t ${outputDir} --quiet && cp -r ${srcDir}/. ${outputDir}`,
                 { stdio: "inherit" }
               );
               return true;
