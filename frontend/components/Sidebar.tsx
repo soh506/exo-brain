@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Conversation, listConversations, deleteConversation, updateTitle, getConversation } from "@/lib/api";
+import { Conversation, listConversations, deleteConversation, updateTitle } from "@/lib/api";
 
 interface Props {
   onClose?: () => void;
@@ -26,24 +26,21 @@ export default function Sidebar({ onClose }: Props) {
       .finally(() => setLoading(false));
   }, []);
 
+  // ChatWindowからの新規会話作成通知を受け取る
   useEffect(() => {
-    if (!currentId) return;
-    const exists = conversations.some((c) => c.conversation_id === currentId);
-    if (exists) return;
-    getConversation(currentId)
-      .then((conv) => {
-        setConversations((prev) => [
-          {
-            conversation_id: conv.conversation_id,
-            title: conv.title || "無題",
-            updated_at: conv.updated_at,
-            message_count: (conv.messages ?? []).length,
-          },
+    const handler = (e: Event) => {
+      const { id, title } = (e as CustomEvent).detail;
+      setConversations((prev) => {
+        if (prev.some((c) => c.conversation_id === id)) return prev;
+        return [
+          { conversation_id: id, title: title || "無題", updated_at: new Date().toISOString(), message_count: 1 },
           ...prev,
-        ]);
-      })
-      .catch(console.error);
-  }, [currentId]); // eslint-disable-line react-hooks/exhaustive-deps
+        ];
+      });
+    };
+    window.addEventListener("exobrain:newConversation", handler);
+    return () => window.removeEventListener("exobrain:newConversation", handler);
+  }, []);
 
   useEffect(() => {
     if (editingId) editInputRef.current?.focus();

@@ -6,5 +6,6 @@ import ChatWindow from "@/components/ChatWindow";
 export default function ChatLoader() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") ?? undefined;
-  return <ChatWindow conversationId={id} />;
+  // keyが変わるとChatWindowが完全にリセットされる
+  return <ChatWindow key={id ?? "new"} conversationId={id} />;
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Message, sendMessage, getConversation } from "@/lib/api";
 
 interface Props {
@@ -16,28 +15,16 @@ export default function ChatWindow({ conversationId }: Props) {
   const [currentConvId, setCurrentConvId] = useState(conversationId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  // 自分でURLを書き換えた直後かどうかを追跡するフラグ
-  const selfNavigatedRef = useRef(false);
-  const router = useRouter();
 
+  // 初回マウント時に既存会話を取得
   useEffect(() => {
-    // 自分でrouter.replaceした直後はメッセージをクリアしない
-    if (selfNavigatedRef.current) {
-      selfNavigatedRef.current = false;
-      setCurrentConvId(conversationId);
-      return;
-    }
-
-    setCurrentConvId(conversationId);
-    setMessages([]);
     if (!conversationId) return;
-
     setFetching(true);
     getConversation(conversationId)
       .then((conv) => setMessages(conv.messages ?? []))
       .catch(() => setMessages([]))
       .finally(() => setFetching(false));
-  }, [conversationId]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -67,9 +54,16 @@ export default function ChatWindow({ conversationId }: Props) {
       setMessages((prev) => [...prev, assistantMessage]);
 
       if (!currentConvId) {
-        selfNavigatedRef.current = true; // 自分でURLを変えることを宣言
-        setCurrentConvId(res.conversation_id);
-        router.replace(`/?id=${res.conversation_id}`);
+        const newId = res.conversation_id;
+        setCurrentConvId(newId);
+        // サイレントなURL更新（Next.jsルーティングをスキップ）
+        window.history.replaceState({}, "", `/?id=${newId}`);
+        // サイドバーに新しい会話を通知
+        window.dispatchEvent(
+          new CustomEvent("exobrain:newConversation", {
+            detail: { id: newId, title: text.substring(0, 50) },
+          })
+        );
       }
     } catch (err) {
       console.error(err);
