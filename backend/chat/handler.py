@@ -8,10 +8,9 @@ import boto3
 from boto3.dynamodb.conditions import Key
 
 dynamodb = boto3.resource("dynamodb")
-secrets_client = boto3.client("secretsmanager")
 
 TABLE_NAME = os.environ["CONVERSATIONS_TABLE"]
-SECRET_NAME = os.environ["ANTHROPIC_SECRET_NAME"]
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 MODEL_ID = os.environ.get("MODEL_ID", "claude-sonnet-4-6")
 DEFAULT_USER_ID = "default"
 
@@ -21,9 +20,7 @@ _anthropic_client = None
 def get_anthropic_client() -> anthropic.Anthropic:
     global _anthropic_client
     if _anthropic_client is None:
-        secret = secrets_client.get_secret_value(SecretId=SECRET_NAME)
-        api_key = json.loads(secret["SecretString"])["api_key"]
-        _anthropic_client = anthropic.Anthropic(api_key=api_key)
+        _anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     return _anthropic_client
 
 

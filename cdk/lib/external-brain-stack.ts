@@ -3,8 +3,6 @@ import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as apigateway from "aws-cdk-lib/aws-apigatewayv2";
 import * as integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
-import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import * as iam from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
 import * as path from "path";
 
@@ -29,12 +27,8 @@ export class ExternalBrainStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
-    // Anthropic APIキーをSecrets Managerから取得
-    const anthropicSecret = secretsmanager.Secret.fromSecretNameV2(
-      this,
-      "AnthropicApiKey",
-      "external-brain/anthropic-api-key"
-    );
+    // Anthropic APIキーはデプロイ時に環境変数で渡す
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY ?? "";
 
     // Lambda: チャット処理
     const chatHandler = new lambda.Function(this, "ChatHandler", {
@@ -55,14 +49,12 @@ export class ExternalBrainStack extends cdk.Stack {
       memorySize: 512,
       environment: {
         CONVERSATIONS_TABLE: conversationsTable.tableName,
-        ANTHROPIC_SECRET_NAME: "external-brain/anthropic-api-key",
+        ANTHROPIC_API_KEY: anthropicApiKey,
         MODEL_ID: "claude-sonnet-4-6",
       },
     });
 
-    // Lambda に DynamoDB と Secrets Manager の権限を付与
     conversationsTable.grantReadWriteData(chatHandler);
-    anthropicSecret.grantRead(chatHandler);
 
     // HTTP API Gateway
     const httpApi = new apigateway.HttpApi(this, "ExternalBrainApi", {
@@ -74,7 +66,7 @@ export class ExternalBrainStack extends cdk.Stack {
           apigateway.CorsHttpMethod.POST,
           apigateway.CorsHttpMethod.OPTIONS,
         ],
-        allowOrigins: ["*"], // Phase 6でCognito導入後に絞る
+        allowOrigins: ["*"],
       },
     });
 
@@ -83,7 +75,6 @@ export class ExternalBrainStack extends cdk.Stack {
       chatHandler
     );
 
-    // ルーティング
     httpApi.addRoutes({
       path: "/chat",
       methods: [apigateway.HttpMethod.POST],
@@ -102,7 +93,6 @@ export class ExternalBrainStack extends cdk.Stack {
       integration: lambdaIntegration,
     });
 
-    // 出力
     new cdk.CfnOutput(this, "ApiEndpoint", {
       value: httpApi.apiEndpoint,
       description: "API Gateway endpoint URL",
