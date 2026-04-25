@@ -5,6 +5,7 @@ import * as apigateway from "aws-cdk-lib/aws-apigatewayv2";
 import * as integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import { Construct } from "constructs";
 import * as path from "path";
+import { execSync } from "child_process";
 
 export class ExternalBrainStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -37,6 +38,17 @@ export class ExternalBrainStack extends cdk.Stack {
       code: lambda.Code.fromAsset(path.join(__dirname, "../../backend/chat"), {
         bundling: {
           image: lambda.Runtime.PYTHON_3_12.bundlingImage,
+          local: {
+            tryBundle(outputDir: string) {
+              const srcDir = path.join(__dirname, "../../backend/chat");
+              execSync(
+                `pip3 install -r requirements.txt -t ${outputDir} --quiet && cp -r ${srcDir}/. ${outputDir}`,
+                { stdio: "inherit" }
+              );
+              return true;
+            },
+          },
+          // Dockerが使える環境向けのフォールバック
           command: [
             "bash",
             "-c",
