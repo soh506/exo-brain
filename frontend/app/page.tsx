@@ -1,13 +1,9 @@
 "use client";
 
-import { Suspense } from "react";
+import { useConversation } from "./conversation-context";
 import ChatWindow from "@/components/ChatWindow";
-import ChatLoader from "@/components/ChatLoader";
 
 export default function Home() {
-  return (
-    <Suspense fallback={<ChatWindow />}>
-      <ChatLoader />
-    </Suspense>
-  );
+  const { currentId } = useConversation();
+  return <ChatWindow key={currentId ?? "new"} conversationId={currentId} />;
 }

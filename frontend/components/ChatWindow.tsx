@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Message, sendMessage, getConversation } from "@/lib/api";
+import { useConversation } from "@/app/conversation-context";
 
 interface Props {
   conversationId?: string;
@@ -15,8 +16,9 @@ export default function ChatWindow({ conversationId }: Props) {
   const [currentConvId, setCurrentConvId] = useState(conversationId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { setCurrentId } = useConversation();
 
-  // 初回マウント時に既存会話を取得
+  // マウント時のみ実行（keyが変わるとリマウントされる）
   useEffect(() => {
     if (!conversationId) return;
     setFetching(true);
@@ -56,9 +58,9 @@ export default function ChatWindow({ conversationId }: Props) {
       if (!currentConvId) {
         const newId = res.conversation_id;
         setCurrentConvId(newId);
-        // サイレントなURL更新（Next.jsルーティングをスキップ）
-        window.history.replaceState({}, "", `/?id=${newId}`);
-        // サイドバーに新しい会話を通知
+        // コンテキスト経由で更新（URLバーも更新される）
+        setCurrentId(newId);
+        // サイドバーに通知
         window.dispatchEvent(
           new CustomEvent("exobrain:newConversation", {
             detail: { id: newId, title: text.substring(0, 50) },

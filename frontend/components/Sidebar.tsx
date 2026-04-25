@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
 import { Conversation, listConversations, deleteConversation, updateTitle } from "@/lib/api";
+import { useConversation } from "@/app/conversation-context";
 
 interface Props {
   onClose?: () => void;
@@ -15,9 +14,7 @@ export default function Sidebar({ onClose }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const editInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const currentId = searchParams.get("id");
+  const { currentId, setCurrentId } = useConversation();
 
   useEffect(() => {
     listConversations()
@@ -46,16 +43,23 @@ export default function Sidebar({ onClose }: Props) {
     if (editingId) editInputRef.current?.focus();
   }, [editingId]);
 
+  const handleNewChat = () => {
+    setCurrentId(undefined);
+    onClose?.();
+  };
+
+  const handleSelect = (id: string) => {
+    setCurrentId(id);
+    onClose?.();
+  };
+
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
     if (!confirm("この会話を削除しますか？")) return;
     await deleteConversation(id);
     setConversations((prev) => prev.filter((c) => c.conversation_id !== id));
-    if (currentId === id) {
-      router.push("/");
-      onClose?.();
-    }
+    if (currentId === id) setCurrentId(undefined);
   };
 
   const startEditing = (e: React.MouseEvent, conv: Conversation) => {
@@ -83,13 +87,12 @@ export default function Sidebar({ onClose }: Props) {
   return (
     <aside className="w-64 flex-shrink-0 bg-gray-900 text-white flex flex-col h-full">
       <div className="p-4 border-b border-gray-700">
-        <Link
-          href="/"
-          onClick={onClose}
+        <button
+          onClick={handleNewChat}
           className="w-full block text-center py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors"
         >
           + 新しいチャット
-        </Link>
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -113,32 +116,30 @@ export default function Sidebar({ onClose }: Props) {
                     />
                   </div>
                 ) : (
-                  <Link
-                    href={`/?id=${conv.conversation_id}`}
-                    onClick={onClose}
-                    className={`flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-700 transition-colors ${
+                  <button
+                    onClick={() => handleSelect(conv.conversation_id)}
+                    className={`w-full flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-700 transition-colors text-left ${
                       currentId === conv.conversation_id ? "bg-gray-700" : ""
                     }`}
                   >
                     <span className="truncate flex-1 mr-1">{conv.title || "無題"}</span>
-                    {/* モバイルは常時表示、デスクトップはhover時のみ */}
                     <span className="flex gap-1 flex-shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100">
-                      <button
+                      <span
                         onClick={(e) => startEditing(e, conv)}
-                        className="text-gray-400 hover:text-white text-xs p-1"
+                        className="text-gray-400 hover:text-white text-xs p-1 cursor-pointer"
                         aria-label="タイトルを編集"
                       >
                         ✎
-                      </button>
-                      <button
+                      </span>
+                      <span
                         onClick={(e) => handleDelete(e, conv.conversation_id)}
-                        className="text-gray-400 hover:text-red-400 text-xs p-1"
+                        className="text-gray-400 hover:text-red-400 text-xs p-1 cursor-pointer"
                         aria-label="削除"
                       >
                         ✕
-                      </button>
+                      </span>
                     </span>
-                  </Link>
+                  </button>
                 )}
               </li>
             ))}
