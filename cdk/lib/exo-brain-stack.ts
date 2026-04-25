@@ -75,6 +75,8 @@ export class ExoBrainStack extends cdk.Stack {
         allowMethods: [
           apigateway.CorsHttpMethod.GET,
           apigateway.CorsHttpMethod.POST,
+          apigateway.CorsHttpMethod.PATCH,
+          apigateway.CorsHttpMethod.DELETE,
           apigateway.CorsHttpMethod.OPTIONS,
         ],
         allowOrigins: ["*"],
@@ -100,7 +102,7 @@ export class ExoBrainStack extends cdk.Stack {
 
     httpApi.addRoutes({
       path: "/conversations/{conversationId}",
-      methods: [apigateway.HttpMethod.GET, apigateway.HttpMethod.DELETE],
+      methods: [apigateway.HttpMethod.GET, apigateway.HttpMethod.DELETE, apigateway.HttpMethod.PATCH],
       integration: lambdaIntegration,
     });
 

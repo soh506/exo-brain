@@ -36,6 +36,9 @@ def lambda_handler(event: dict, context) -> dict:
         elif method == "GET" and "/conversations/" in path:
             conversation_id = event.get("pathParameters", {}).get("conversationId")
             return handle_get_conversation(conversation_id)
+        elif method == "PATCH" and "/conversations/" in path:
+            conversation_id = event.get("pathParameters", {}).get("conversationId")
+            return handle_update_title(event, conversation_id)
         elif method == "DELETE" and "/conversations/" in path:
             conversation_id = event.get("pathParameters", {}).get("conversationId")
             return handle_delete_conversation(conversation_id)
@@ -56,19 +59,20 @@ def handle_chat(event: dict) -> dict:
 
     table = dynamodb.Table(TABLE_NAME)
     now = datetime.now(timezone.utc).isoformat()
+    is_new = not conversation_id
 
-    # 既存の会話を取得、なければ新規作成
     if conversation_id:
         result = table.get_item(Key={"conversation_id": conversation_id})
         conversation = result.get("Item")
         if not conversation:
             return response(404, {"error": "Conversation not found"})
         messages = conversation.get("messages", [])
+        existing_title = conversation.get("title", "")
     else:
         conversation_id = str(uuid.uuid4())
         messages = []
+        existing_title = ""
 
-    # Claude に渡すメッセージ履歴を構築
     messages.append({"role": "user", "content": user_message, "timestamp": now})
 
     claude_messages = [
@@ -76,7 +80,6 @@ def handle_chat(event: dict) -> dict:
         for m in messages
     ]
 
-    # Claude API 呼び出し
     client = get_anthropic_client()
     claude_response = client.messages.create(
         model=MODEL_ID,
@@ -96,29 +99,28 @@ def handle_chat(event: dict) -> dict:
         "timestamp": datetime.now(timezone.utc).isoformat(),
     })
 
-    # タイトルは最初のユーザーメッセージから自動生成
-    title = user_message[:50] if len(messages) == 2 else None
+    title = user_message[:50] if is_new else existing_title
 
-    # DynamoDB に保存
-    item = {
-        "conversation_id": conversation_id,
-        "user_id": DEFAULT_USER_ID,
-        "messages": messages,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
-    if title:
-        item["title"] = title
-        item["created_at"] = now
-
-    table.put_item(
-        Item=item,
-        ConditionExpression="attribute_not_exists(conversation_id) OR attribute_exists(conversation_id)",
-    )
-
-    # タイトルが既存の場合は取得
-    if not title:
-        result = table.get_item(Key={"conversation_id": conversation_id})
-        title = result.get("Item", {}).get("title", "")
+    if is_new:
+        # 新規会話はput_itemで全フィールドを保存
+        table.put_item(Item={
+            "conversation_id": conversation_id,
+            "user_id": DEFAULT_USER_ID,
+            "messages": messages,
+            "title": title,
+            "created_at": now,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+    else:
+        # 既存会話はmessagesとupdated_atだけ更新（タイトルを上書きしない）
+        table.update_item(
+            Key={"conversation_id": conversation_id},
+            UpdateExpression="SET messages = :messages, updated_at = :updated_at",
+            ExpressionAttributeValues={
+                ":messages": messages,
+                ":updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
 
     return response(200, {
         "conversation_id": conversation_id,
@@ -127,12 +129,31 @@ def handle_chat(event: dict) -> dict:
     })
 
 
+def handle_update_title(event: dict, conversation_id: str) -> dict:
+    if not conversation_id:
+        return response(400, {"error": "conversationId is required"})
+
+    body = json.loads(event.get("body") or "{}")
+    title = body.get("title", "").strip()
+
+    if not title:
+        return response(400, {"error": "title is required"})
+
+    table = dynamodb.Table(TABLE_NAME)
+    table.update_item(
+        Key={"conversation_id": conversation_id},
+        UpdateExpression="SET title = :title",
+        ExpressionAttributeValues={":title": title},
+    )
+    return response(200, {"title": title})
+
+
 def handle_list_conversations() -> dict:
     table = dynamodb.Table(TABLE_NAME)
     result = table.query(
         IndexName="user-updated-index",
         KeyConditionExpression=Key("user_id").eq(DEFAULT_USER_ID),
-        ScanIndexForward=False,  # 新しい順
+        ScanIndexForward=False,
         Limit=50,
     )
     conversations = [

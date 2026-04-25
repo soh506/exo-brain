@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Conversation, listConversations, deleteConversation } from "@/lib/api";
+import { Conversation, listConversations, deleteConversation, updateTitle } from "@/lib/api";
 
 export default function Sidebar() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentId = searchParams.get("id");
@@ -27,6 +30,10 @@ export default function Sidebar() {
     load();
   }, [currentId]);
 
+  useEffect(() => {
+    if (editingId) editInputRef.current?.focus();
+  }, [editingId]);
+
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -34,6 +41,29 @@ export default function Sidebar() {
     await deleteConversation(id);
     setConversations((prev) => prev.filter((c) => c.conversation_id !== id));
     if (currentId === id) router.push("/");
+  };
+
+  const startEditing = (e: React.MouseEvent, conv: Conversation) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingId(conv.conversation_id);
+    setEditingTitle(conv.title || "");
+  };
+
+  const commitEdit = async (id: string) => {
+    const title = editingTitle.trim();
+    if (title) {
+      await updateTitle(id, title).catch(console.error);
+      setConversations((prev) =>
+        prev.map((c) => (c.conversation_id === id ? { ...c, title } : c))
+      );
+    }
+    setEditingId(null);
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === "Enter") commitEdit(id);
+    if (e.key === "Escape") setEditingId(null);
   };
 
   return (
@@ -56,21 +86,43 @@ export default function Sidebar() {
           <ul className="py-2">
             {conversations.map((conv) => (
               <li key={conv.conversation_id} className="group">
-                <Link
-                  href={`/?id=${conv.conversation_id}`}
-                  className={`flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-700 transition-colors ${
-                    currentId === conv.conversation_id ? "bg-gray-700" : ""
-                  }`}
-                >
-                  <span className="truncate flex-1 mr-2">{conv.title || "無題"}</span>
-                  <button
-                    onClick={(e) => handleDelete(e, conv.conversation_id)}
-                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 text-xs flex-shrink-0"
-                    aria-label="削除"
+                {editingId === conv.conversation_id ? (
+                  <div className="px-4 py-2">
+                    <input
+                      ref={editInputRef}
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={() => commitEdit(conv.conversation_id)}
+                      onKeyDown={(e) => handleEditKeyDown(e, conv.conversation_id)}
+                      className="w-full bg-gray-700 text-white text-sm px-2 py-1 rounded outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                ) : (
+                  <Link
+                    href={`/?id=${conv.conversation_id}`}
+                    className={`flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-700 transition-colors ${
+                      currentId === conv.conversation_id ? "bg-gray-700" : ""
+                    }`}
                   >
-                    ✕
-                  </button>
-                </Link>
+                    <span className="truncate flex-1 mr-1">{conv.title || "無題"}</span>
+                    <span className="flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100">
+                      <button
+                        onClick={(e) => startEditing(e, conv)}
+                        className="text-gray-400 hover:text-white text-xs"
+                        aria-label="タイトルを編集"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        onClick={(e) => handleDelete(e, conv.conversation_id)}
+                        className="text-gray-400 hover:text-red-400 text-xs"
+                        aria-label="削除"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  </Link>
+                )}
               </li>
             ))}
           </ul>

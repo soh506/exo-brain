@@ -51,3 +51,12 @@ export async function deleteConversation(id: string): Promise<void> {
   const res = await fetch(`${API_URL}/conversations/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
+
+export async function updateTitle(id: string, title: string): Promise<void> {
+  const res = await fetch(`${API_URL}/conversations/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+}
