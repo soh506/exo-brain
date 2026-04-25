@@ -194,6 +194,57 @@ Please go to Plans & Billing to upgrade or purchase credits.
 
 ---
 
+### 6. AmplifyデプロイでHTTP 404エラー
+
+Amplifyにデプロイしたが、URLを開くと404。
+
+**原因①：Next.jsのサーバーサイド機能が静的ホスティングで動かない**
+
+`redirect()` や `await params` などのサーバーコンポーネント機能は、Amplifyの静的ホスティングモードでは実行されない。
+
+**解決策：** `next.config.ts` に `output: 'export'` を追加して完全な静的エクスポートに変更。あわせてサーバーコンポーネントをクライアントコンポーネントに書き直した。
+
+```typescript
+// next.config.ts
+const nextConfig: NextConfig = {
+  output: "export",
+  trailingSlash: true,
+};
+```
+
+**原因②：`amplify.yml` の出力ディレクトリが間違っていた**
+
+`output: 'export'` の場合、Next.jsの出力先は `.next/` ではなく `out/` になる。最初の `amplify.yml` では `.next/` を指定していたため、Amplifyが正しいファイルを見つけられなかった。
+
+```yaml
+# NG
+artifacts:
+  baseDirectory: .next
+
+# OK
+artifacts:
+  baseDirectory: out
+```
+
+**原因③：`useSearchParams` が Suspense でラップされていない**
+
+静的エクスポート時のビルドで以下のエラー。
+
+```
+useSearchParams() should be wrapped in a suspense boundary at page "/404"
+```
+
+`useSearchParams()` を使うコンポーネントはすべて `<Suspense>` で囲む必要がある。
+
+```tsx
+// layout.tsx
+<Suspense fallback={<div className="w-64 bg-gray-900" />}>
+  <Sidebar />
+</Suspense>
+```
+
+---
+
 ## Claude Code体験談
 
 今回の最大の発見は「エラー文をそのまま投げると自律的に修正してくれる」という体験だ。
@@ -224,14 +275,16 @@ https://github.com/soh506/exo-brain
 
 ## おわりに・次のステップ
 
-Phase 1では「チャットして会話が保存される」ところまでできた。
+今回でここまでできた。
+
+- ✅ **Phase 1**：チャットボット + 会話の自動保存（Lambda + DynamoDB）
+- ✅ **Phase 2**：Amplifyでフロントをクラウドに公開 → スマホ・他PCからアクセス可能に
 
 外部脳として真価を発揮するのはここから。
 
-- **Phase 2**：フロントエンドをAWSにデプロイ（S3 + CloudFront）
-- **Phase 3**：全文検索（OpenSearch）
-- **Phase 4**：あいまい検索・セマンティック検索（Bedrock + ベクトル検索）
-- **Phase 5**：画像・図の保存と表示
+- **Phase 3**：ログイン機能（Cognito）→ 自分だけがアクセスできる
+- **Phase 4**：全文検索（OpenSearch）→「あの話題どこだっけ」が探せる
+- **Phase 5**：セマンティック検索（Bedrock）→ あいまいな言葉でも関連情報を提案
 
 「アレってどうだったっけ？」と自分と会話できる外部脳を目指して、シリーズで続けていく。
 
