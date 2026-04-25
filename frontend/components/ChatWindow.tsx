@@ -138,7 +138,7 @@ export default function ChatWindow({ conversationId }: Props) {
             onKeyDown={handleKeyDown}
             placeholder="メッセージを入力（Enter で送信、Shift+Enter で改行）"
             rows={1}
-            className="flex-1 resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="flex-1 resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             style={{ maxHeight: "120px", overflowY: "auto" }}
             disabled={loading || fetching}
           />
