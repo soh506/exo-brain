@@ -2,21 +2,34 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Message, sendMessage } from "@/lib/api";
+import { Message, sendMessage, getConversation } from "@/lib/api";
 
 interface Props {
   conversationId?: string;
-  initialMessages?: Message[];
 }
 
-export default function ChatWindow({ conversationId, initialMessages = [] }: Props) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+export default function ChatWindow({ conversationId }: Props) {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [currentConvId, setCurrentConvId] = useState(conversationId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
+
+  // 会話IDが変わるたびに履歴を取得
+  useEffect(() => {
+    setCurrentConvId(conversationId);
+    setMessages([]);
+    if (!conversationId) return;
+
+    setFetching(true);
+    getConversation(conversationId)
+      .then((conv) => setMessages(conv.messages ?? []))
+      .catch(() => setMessages([]))
+      .finally(() => setFetching(false));
+  }, [conversationId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -74,9 +87,12 @@ export default function ChatWindow({ conversationId, initialMessages = [] }: Pro
 
   return (
     <div className="flex flex-col h-screen bg-white">
-      {/* メッセージ一覧 */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-        {messages.length === 0 && (
+        {fetching ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-400 text-sm animate-pulse">読み込み中...</p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-400">
               <p className="text-2xl mb-2">🧠</p>
@@ -84,24 +100,24 @@ export default function ChatWindow({ conversationId, initialMessages = [] }: Pro
               <p className="text-sm mt-1">何でも聞いてください</p>
             </div>
           </div>
-        )}
-
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+        ) : (
+          messages.map((msg, i) => (
             <div
-              className={`max-w-2xl px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                msg.role === "user"
-                  ? "bg-blue-600 text-white rounded-br-sm"
-                  : "bg-gray-100 text-gray-800 rounded-bl-sm"
-              }`}
+              key={i}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {msg.content}
+              <div
+                className={`max-w-2xl px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                  msg.role === "user"
+                    ? "bg-blue-600 text-white rounded-br-sm"
+                    : "bg-gray-100 text-gray-800 rounded-bl-sm"
+                }`}
+              >
+                {msg.content}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
 
         {loading && (
           <div className="flex justify-start">
@@ -113,7 +129,6 @@ export default function ChatWindow({ conversationId, initialMessages = [] }: Pro
         <div ref={bottomRef} />
       </div>
 
-      {/* 入力フォーム */}
       <div className="border-t border-gray-200 p-4">
         <form onSubmit={handleSubmit} className="flex gap-2 max-w-3xl mx-auto">
           <textarea
@@ -125,11 +140,11 @@ export default function ChatWindow({ conversationId, initialMessages = [] }: Pro
             rows={1}
             className="flex-1 resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             style={{ maxHeight: "120px", overflowY: "auto" }}
-            disabled={loading}
+            disabled={loading || fetching}
           />
           <button
             type="submit"
-            disabled={loading || !input.trim()}
+            disabled={loading || fetching || !input.trim()}
             className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             送信
