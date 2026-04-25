@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Conversation, listConversations, deleteConversation } from "@/lib/api";
 
 export default function Sidebar() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentId = searchParams.get("id");
 
   const load = async () => {
     try {
@@ -24,7 +25,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     load();
-  }, [pathname]);
+  }, [currentId]);
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -32,16 +33,14 @@ export default function Sidebar() {
     if (!confirm("この会話を削除しますか？")) return;
     await deleteConversation(id);
     setConversations((prev) => prev.filter((c) => c.conversation_id !== id));
-    if (pathname === `/chat/${id}`) router.push("/chat/new");
+    if (currentId === id) router.push("/");
   };
-
-  const currentId = pathname.startsWith("/chat/") ? pathname.split("/")[2] : null;
 
   return (
     <aside className="w-64 flex-shrink-0 bg-gray-900 text-white flex flex-col h-screen">
       <div className="p-4 border-b border-gray-700">
         <Link
-          href="/chat/new"
+          href="/"
           className="w-full block text-center py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors"
         >
           + 新しいチャット
@@ -58,7 +57,7 @@ export default function Sidebar() {
             {conversations.map((conv) => (
               <li key={conv.conversation_id} className="group">
                 <Link
-                  href={`/chat/${conv.conversation_id}`}
+                  href={`/?id=${conv.conversation_id}`}
                   className={`flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-700 transition-colors ${
                     currentId === conv.conversation_id ? "bg-gray-700" : ""
                   }`}

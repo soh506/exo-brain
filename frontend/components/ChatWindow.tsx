@@ -47,7 +47,7 @@ export default function ChatWindow({ conversationId, initialMessages = [] }: Pro
 
       if (!currentConvId) {
         setCurrentConvId(res.conversation_id);
-        router.replace(`/chat/${res.conversation_id}`);
+        router.replace(`/?id=${res.conversation_id}`);
       }
     } catch (err) {
       console.error(err);

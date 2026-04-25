@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 
@@ -14,7 +15,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ja" className={`${geist.variable} h-full`}>
       <body className="h-full flex antialiased font-sans">
-        <Sidebar />
+        <Suspense fallback={<div className="w-64 flex-shrink-0 bg-gray-900" />}>
+          <Sidebar />
+        </Suspense>
         <main className="flex-1 overflow-hidden">{children}</main>
       </body>
     </html>
