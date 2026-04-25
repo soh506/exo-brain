@@ -16,10 +16,18 @@ export default function ChatWindow({ conversationId }: Props) {
   const [currentConvId, setCurrentConvId] = useState(conversationId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // 自分でURLを書き換えた直後かどうかを追跡するフラグ
+  const selfNavigatedRef = useRef(false);
   const router = useRouter();
 
-  // 会話IDが変わるたびに履歴を取得
   useEffect(() => {
+    // 自分でrouter.replaceした直後はメッセージをクリアしない
+    if (selfNavigatedRef.current) {
+      selfNavigatedRef.current = false;
+      setCurrentConvId(conversationId);
+      return;
+    }
+
     setCurrentConvId(conversationId);
     setMessages([]);
     if (!conversationId) return;
@@ -59,6 +67,7 @@ export default function ChatWindow({ conversationId }: Props) {
       setMessages((prev) => [...prev, assistantMessage]);
 
       if (!currentConvId) {
+        selfNavigatedRef.current = true; // 自分でURLを変えることを宣言
         setCurrentConvId(res.conversation_id);
         router.replace(`/?id=${res.conversation_id}`);
       }
