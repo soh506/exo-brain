@@ -1,8 +1,8 @@
 {
-  "name": "external-brain-cdk",
+  "name": "exo-brain-cdk",
   "version": "0.1.0",
   "bin": {
-    "external-brain": "bin/external-brain.js"
+    "exo-brain": "bin/exo-brain.js"
   },
   "scripts": {
     "build": "tsc",

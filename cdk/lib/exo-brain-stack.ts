@@ -7,13 +7,13 @@ import { Construct } from "constructs";
 import * as path from "path";
 import { execSync } from "child_process";
 
-export class ExternalBrainStack extends cdk.Stack {
+export class ExoBrainStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     // DynamoDB: 会話履歴テーブル
     const conversationsTable = new dynamodb.Table(this, "ConversationsTable", {
-      tableName: "external-brain-conversations",
+      tableName: "exo-brain-conversations",
       partitionKey: { name: "conversation_id", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
@@ -33,7 +33,7 @@ export class ExternalBrainStack extends cdk.Stack {
 
     // Lambda: チャット処理
     const chatHandler = new lambda.Function(this, "ChatHandler", {
-      functionName: "external-brain-chat",
+      functionName: "exo-brain-chat",
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset(path.join(__dirname, "../../backend/chat"), {
         bundling: {
@@ -48,7 +48,6 @@ export class ExternalBrainStack extends cdk.Stack {
               return true;
             },
           },
-          // Dockerが使える環境向けのフォールバック
           command: [
             "bash",
             "-c",
@@ -69,8 +68,8 @@ export class ExternalBrainStack extends cdk.Stack {
     conversationsTable.grantReadWriteData(chatHandler);
 
     // HTTP API Gateway
-    const httpApi = new apigateway.HttpApi(this, "ExternalBrainApi", {
-      apiName: "external-brain-api",
+    const httpApi = new apigateway.HttpApi(this, "ExoBrainApi", {
+      apiName: "exo-brain-api",
       corsPreflight: {
         allowHeaders: ["Content-Type", "Authorization"],
         allowMethods: [
@@ -108,7 +107,7 @@ export class ExternalBrainStack extends cdk.Stack {
     new cdk.CfnOutput(this, "ApiEndpoint", {
       value: httpApi.apiEndpoint,
       description: "API Gateway endpoint URL",
-      exportName: "ExternalBrainApiEndpoint",
+      exportName: "ExoBrainApiEndpoint",
     });
 
     new cdk.CfnOutput(this, "ConversationsTableName", {

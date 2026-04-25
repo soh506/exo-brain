@@ -6,7 +6,7 @@ import Sidebar from "@/components/Sidebar";
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 
 export const metadata: Metadata = {
-  title: "External Brain",
+  title: "ExoBrain",
   description: "あなたの外部脳 - AIチャットボット with 会話履歴",
 };
 

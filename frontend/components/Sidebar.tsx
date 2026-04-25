@@ -79,7 +79,7 @@ export default function Sidebar() {
       </div>
 
       <div className="p-4 border-t border-gray-700">
-        <p className="text-xs text-gray-500 text-center">External Brain v0.1</p>
+        <p className="text-xs text-gray-500 text-center">ExoBrain v0.1</p>
       </div>
     </aside>
   );

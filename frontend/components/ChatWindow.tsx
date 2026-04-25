@@ -80,7 +80,7 @@ export default function ChatWindow({ conversationId, initialMessages = [] }: Pro
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-400">
               <p className="text-2xl mb-2">🧠</p>
-              <p className="text-lg font-medium">External Brain</p>
+              <p className="text-lg font-medium">ExoBrain</p>
               <p className="text-sm mt-1">何でも聞いてください</p>
             </div>
           </div>
