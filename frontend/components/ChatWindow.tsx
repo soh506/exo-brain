@@ -16,6 +16,7 @@ export default function ChatWindow({ conversationId }: Props) {
   const [currentConvId, setCurrentConvId] = useState(conversationId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isComposingRef = useRef(false);
   const { setCurrentId } = useConversation();
 
   // マウント時のみ実行（keyが変わるとリマウントされる）
@@ -89,7 +90,7 @@ export default function ChatWindow({ conversationId }: Props) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+    if (e.key === "Enter" && !e.shiftKey && !isComposingRef.current) {
       e.preventDefault();
       handleSubmit(e as unknown as React.FormEvent);
     }
@@ -145,6 +146,8 @@ export default function ChatWindow({ conversationId }: Props) {
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onCompositionStart={() => { isComposingRef.current = true; }}
+            onCompositionEnd={() => { isComposingRef.current = false; }}
             onKeyDown={handleKeyDown}
             placeholder="メッセージを入力（Enter で送信、Shift+Enter で改行）"
             rows={1}
