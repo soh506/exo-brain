@@ -16,10 +16,10 @@ export default function ChatWindow({ conversationId }: Props) {
   const [currentConvId, setCurrentConvId] = useState(conversationId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  // Chrome: compositionend → keydown の順。確定直後のkeydownをブロックするフラグ。
   const compositionJustEndedRef = useRef(false);
-  // Safari: keydown → compositionend の順。keydownで既に処理済みかを記録するフラグ。
   const compositionEndHandledRef = useRef(false);
+  // 現在のcompositionに実際のテキストがあるか追跡（空=""はIME再起動の空composition）
+  const compositionTextRef = useRef("");
   const { setCurrentId } = useConversation();
 
   // マウント時のみ実行（keyが変わるとリマウントされる）
@@ -94,8 +94,14 @@ export default function ChatWindow({ conversationId }: Props) {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
+      // 実テキストのある変換中はブロック（空compositionのIME再起動は除外）
+      if (e.nativeEvent.isComposing && compositionTextRef.current !== "") {
+        e.preventDefault();
+        compositionEndHandledRef.current = true;
+        return;
+      }
+      // 直前にIME確定があった場合は1回だけブロック
       if (compositionJustEndedRef.current) {
-        // IME確定直後のEnterをブロック。後続のcompositionendでフラグを再設定させない。
         e.preventDefault();
         compositionJustEndedRef.current = false;
         compositionEndHandledRef.current = true;
@@ -157,10 +163,14 @@ export default function ChatWindow({ conversationId }: Props) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onCompositionStart={() => {
+              compositionTextRef.current = "";
               compositionEndHandledRef.current = false;
             }}
+            onCompositionUpdate={(e) => {
+              compositionTextRef.current = e.data;
+            }}
             onCompositionEnd={(e) => {
-              // data=""はEnter確定後のIME再起動による空のcomposition。フラグを立てない。
+              compositionTextRef.current = "";
               if (!compositionEndHandledRef.current && e.data !== "") {
                 compositionJustEndedRef.current = true;
               }
