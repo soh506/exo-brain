@@ -16,7 +16,10 @@ export default function ChatWindow({ conversationId }: Props) {
   const [currentConvId, setCurrentConvId] = useState(conversationId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const isComposingRef = useRef(false);
+  // Chrome: compositionend → keydown の順。確定直後のkeydownをブロックするフラグ。
+  const compositionJustEndedRef = useRef(false);
+  // Safari: keydown → compositionend の順。keydownで既に処理済みかを記録するフラグ。
+  const compositionEndHandledRef = useRef(false);
   const { setCurrentId } = useConversation();
 
   // マウント時のみ実行（keyが変わるとリマウントされる）
@@ -91,7 +94,16 @@ export default function ChatWindow({ conversationId }: Props) {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      if (isComposingRef.current || e.nativeEvent.isComposing) return;
+      if (e.nativeEvent.isComposing) {
+        // Safari: keydownがcompositionendより先に発火。次のcompositionendでフラグを立てない。
+        compositionEndHandledRef.current = true;
+        return;
+      }
+      if (compositionJustEndedRef.current) {
+        // Chrome: compositionendがkeydownより先に発火。この1回だけブロック。
+        compositionJustEndedRef.current = false;
+        return;
+      }
       e.preventDefault();
       handleSubmit(e as unknown as React.FormEvent);
     }
@@ -147,8 +159,17 @@ export default function ChatWindow({ conversationId }: Props) {
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onCompositionStart={() => { isComposingRef.current = true; }}
-            onCompositionEnd={() => { setTimeout(() => { isComposingRef.current = false; }, 0); }}
+            onCompositionStart={() => {
+              compositionJustEndedRef.current = false;
+              compositionEndHandledRef.current = false;
+            }}
+            onCompositionEnd={() => {
+              if (!compositionEndHandledRef.current) {
+                // Chrome: keydownがまだ来ていないので、次のkeydownをブロック
+                compositionJustEndedRef.current = true;
+              }
+              compositionEndHandledRef.current = false;
+            }}
             onKeyDown={handleKeyDown}
             placeholder="メッセージを入力（Enter で送信、Shift+Enter で改行）"
             rows={1}
