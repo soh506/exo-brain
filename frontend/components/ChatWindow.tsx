@@ -94,14 +94,11 @@ export default function ChatWindow({ conversationId }: Props) {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      if (e.nativeEvent.isComposing) {
-        e.preventDefault();
-        compositionEndHandledRef.current = true;
-        return;
-      }
       if (compositionJustEndedRef.current) {
+        // IME確定直後のEnterをブロック。後続のcompositionendでフラグを再設定させない。
         e.preventDefault();
         compositionJustEndedRef.current = false;
+        compositionEndHandledRef.current = true;
         return;
       }
       e.preventDefault();
