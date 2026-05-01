@@ -147,7 +147,7 @@ export default function ChatWindow({ conversationId }: Props) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onCompositionStart={() => { isComposingRef.current = true; }}
-            onCompositionEnd={() => { isComposingRef.current = false; }}
+            onCompositionEnd={() => { setTimeout(() => { isComposingRef.current = false; }, 0); }}
             onKeyDown={handleKeyDown}
             placeholder="メッセージを入力（Enter で送信、Shift+Enter で改行）"
             rows={1}
