@@ -68,12 +68,16 @@ export default function ChatWindow({ conversationId }: Props) {
       if (!currentConvId) {
         const newId = res.conversation_id;
         setCurrentConvId(newId);
-        // コンテキスト経由で更新（URLバーも更新される）
         setCurrentId(newId);
-        // サイドバーに通知
         window.dispatchEvent(
           new CustomEvent("exobrain:newConversation", {
             detail: { id: newId, title: text.substring(0, 50) },
+          })
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("exobrain:messageSent", {
+            detail: { id: currentConvId },
           })
         );
       }

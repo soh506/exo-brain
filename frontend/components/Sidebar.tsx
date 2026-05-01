@@ -23,9 +23,8 @@ export default function Sidebar({ onClose }: Props) {
       .finally(() => setLoading(false));
   }, []);
 
-  // ChatWindowからの新規会話作成通知を受け取る
   useEffect(() => {
-    const handler = (e: Event) => {
+    const handleNew = (e: Event) => {
       const { id, title } = (e as CustomEvent).detail;
       setConversations((prev) => {
         if (prev.some((c) => c.conversation_id === id)) return prev;
@@ -35,8 +34,20 @@ export default function Sidebar({ onClose }: Props) {
         ];
       });
     };
-    window.addEventListener("exobrain:newConversation", handler);
-    return () => window.removeEventListener("exobrain:newConversation", handler);
+    const handleSent = (e: Event) => {
+      const { id } = (e as CustomEvent).detail;
+      setConversations((prev) => {
+        const target = prev.find((c) => c.conversation_id === id);
+        if (!target) return prev;
+        return [target, ...prev.filter((c) => c.conversation_id !== id)];
+      });
+    };
+    window.addEventListener("exobrain:newConversation", handleNew);
+    window.addEventListener("exobrain:messageSent", handleSent);
+    return () => {
+      window.removeEventListener("exobrain:newConversation", handleNew);
+      window.removeEventListener("exobrain:messageSent", handleSent);
+    };
   }, []);
 
   useEffect(() => {
