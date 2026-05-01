@@ -90,7 +90,8 @@ export default function ChatWindow({ conversationId }: Props) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey && !isComposingRef.current) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      if (isComposingRef.current || e.nativeEvent.isComposing) return;
       e.preventDefault();
       handleSubmit(e as unknown as React.FormEvent);
     }
