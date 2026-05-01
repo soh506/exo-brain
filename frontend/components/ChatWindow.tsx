@@ -95,12 +95,12 @@ export default function ChatWindow({ conversationId }: Props) {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       if (e.nativeEvent.isComposing) {
-        // Safari: keydownがcompositionendより先に発火。次のcompositionendでフラグを立てない。
+        e.preventDefault();
         compositionEndHandledRef.current = true;
         return;
       }
       if (compositionJustEndedRef.current) {
-        // Chrome: compositionendがkeydownより先に発火。この1回だけブロック。
+        e.preventDefault();
         compositionJustEndedRef.current = false;
         return;
       }
@@ -159,23 +159,17 @@ export default function ChatWindow({ conversationId }: Props) {
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onCompositionStart={(e) => {
-              console.log("[IME] compositionstart", { data: e.data, justEnded: compositionJustEndedRef.current });
+            onCompositionStart={() => {
               compositionEndHandledRef.current = false;
             }}
             onCompositionEnd={(e) => {
-              console.log("[IME] compositionend", { data: e.data, handledByKey: compositionEndHandledRef.current });
-              if (!compositionEndHandledRef.current) {
+              // data=""はEnter確定後のIME再起動による空のcomposition。フラグを立てない。
+              if (!compositionEndHandledRef.current && e.data !== "") {
                 compositionJustEndedRef.current = true;
               }
               compositionEndHandledRef.current = false;
             }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                console.log("[IME] keydown Enter", { isComposing: e.nativeEvent.isComposing, justEnded: compositionJustEndedRef.current });
-              }
-              handleKeyDown(e);
-            }}
+            onKeyDown={handleKeyDown}
             placeholder="メッセージを入力（Enter で送信、Shift+Enter で改行）"
             rows={1}
             className="flex-1 resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
