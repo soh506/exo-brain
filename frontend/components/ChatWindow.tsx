@@ -160,7 +160,6 @@ export default function ChatWindow({ conversationId }: Props) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onCompositionStart={() => {
-              compositionJustEndedRef.current = false;
               compositionEndHandledRef.current = false;
             }}
             onCompositionEnd={() => {
