@@ -32,6 +32,12 @@ export default function ChatWindow({ conversationId }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (!loading && !fetching) {
+      textareaRef.current?.focus();
+    }
+  }, [loading, fetching]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
@@ -79,7 +85,6 @@ export default function ChatWindow({ conversationId }: Props) {
       ]);
     } finally {
       setLoading(false);
-      textareaRef.current?.focus();
     }
   };
 
