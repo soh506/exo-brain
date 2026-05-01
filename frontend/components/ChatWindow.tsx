@@ -159,17 +159,23 @@ export default function ChatWindow({ conversationId }: Props) {
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onCompositionStart={() => {
+            onCompositionStart={(e) => {
+              console.log("[IME] compositionstart", { data: e.data, justEnded: compositionJustEndedRef.current });
               compositionEndHandledRef.current = false;
             }}
-            onCompositionEnd={() => {
+            onCompositionEnd={(e) => {
+              console.log("[IME] compositionend", { data: e.data, handledByKey: compositionEndHandledRef.current });
               if (!compositionEndHandledRef.current) {
-                // Chrome: keydownがまだ来ていないので、次のkeydownをブロック
                 compositionJustEndedRef.current = true;
               }
               compositionEndHandledRef.current = false;
             }}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                console.log("[IME] keydown Enter", { isComposing: e.nativeEvent.isComposing, justEnded: compositionJustEndedRef.current });
+              }
+              handleKeyDown(e);
+            }}
             placeholder="メッセージを入力（Enter で送信、Shift+Enter で改行）"
             rows={1}
             className="flex-1 resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
