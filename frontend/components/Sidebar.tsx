@@ -19,7 +19,7 @@ export default function Sidebar({ onClose }: Props) {
   useEffect(() => {
     listConversations()
       .then(setConversations)
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -64,18 +64,18 @@ export default function Sidebar({ onClose }: Props) {
     onClose?.();
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDelete = async (id: string) => {
     if (!confirm("この会話を削除しますか？")) return;
-    await deleteConversation(id);
-    setConversations((prev) => prev.filter((c) => c.conversation_id !== id));
-    if (currentId === id) setCurrentId(undefined);
+    try {
+      await deleteConversation(id);
+      setConversations((prev) => prev.filter((c) => c.conversation_id !== id));
+      if (currentId === id) setCurrentId(undefined);
+    } catch {
+      alert("削除に失敗しました。もう一度お試しください。");
+    }
   };
 
-  const startEditing = (e: React.MouseEvent, conv: Conversation) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const startEditing = (conv: Conversation) => {
     setEditingId(conv.conversation_id);
     setEditingTitle(conv.title || "");
   };
@@ -87,7 +87,7 @@ export default function Sidebar({ onClose }: Props) {
     setConversations((prev) =>
       prev.map((c) => (c.conversation_id === id ? { ...c, title } : c))
     );
-    await updateTitle(id, title).catch(console.error);
+    await updateTitle(id, title).catch(() => {});
   };
 
   const handleEditKeyDown = (e: React.KeyboardEvent, id: string) => {
@@ -114,7 +114,7 @@ export default function Sidebar({ onClose }: Props) {
         ) : (
           <ul className="py-2">
             {conversations.map((conv) => (
-              <li key={conv.conversation_id} className="group">
+              <li key={conv.conversation_id} className="group relative">
                 {editingId === conv.conversation_id ? (
                   <div className="px-4 py-2">
                     <input
@@ -127,30 +127,34 @@ export default function Sidebar({ onClose }: Props) {
                     />
                   </div>
                 ) : (
-                  <button
-                    onClick={() => handleSelect(conv.conversation_id)}
-                    className={`w-full flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-700 transition-colors text-left ${
-                      currentId === conv.conversation_id ? "bg-gray-700" : ""
-                    }`}
-                  >
-                    <span className="truncate flex-1 mr-1">{conv.title || "無題"}</span>
-                    <span className="flex gap-1 flex-shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100">
-                      <span
-                        onClick={(e) => startEditing(e, conv)}
-                        className="text-gray-400 hover:text-white text-xs p-1 cursor-pointer"
+                  <>
+                    <button
+                      onClick={() => handleSelect(conv.conversation_id)}
+                      className={`w-full flex items-center px-4 py-2 pr-16 text-sm hover:bg-gray-700 transition-colors text-left ${
+                        currentId === conv.conversation_id ? "bg-gray-700" : ""
+                      }`}
+                    >
+                      <span className="truncate">{conv.title || "無題"}</span>
+                    </button>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => startEditing(conv)}
+                        className="text-gray-400 hover:text-white text-xs p-1"
                         aria-label="タイトルを編集"
                       >
                         ✎
-                      </span>
-                      <span
-                        onClick={(e) => handleDelete(e, conv.conversation_id)}
-                        className="text-gray-400 hover:text-red-400 text-xs p-1 cursor-pointer"
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(conv.conversation_id)}
+                        className="text-gray-400 hover:text-red-400 text-xs p-1"
                         aria-label="削除"
                       >
                         ✕
-                      </span>
-                    </span>
-                  </button>
+                      </button>
+                    </div>
+                  </>
                 )}
               </li>
             ))}

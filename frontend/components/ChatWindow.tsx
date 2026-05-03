@@ -12,7 +12,7 @@ export default function ChatWindow({ conversationId }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
+  const [fetching, setFetching] = useState(() => !!conversationId);
   const [currentConvId, setCurrentConvId] = useState(conversationId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -25,7 +25,6 @@ export default function ChatWindow({ conversationId }: Props) {
   // マウント時のみ実行（keyが変わるとリマウントされる）
   useEffect(() => {
     if (!conversationId) return;
-    setFetching(true);
     getConversation(conversationId)
       .then((conv) => setMessages(conv.messages ?? []))
       .catch(() => setMessages([]))
@@ -42,11 +41,7 @@ export default function ChatWindow({ conversationId }: Props) {
     }
   }, [loading, fetching]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text || loading) return;
-
+  const submitMessage = async (text: string) => {
     const userMessage: Message = {
       role: "user",
       content: text,
@@ -81,8 +76,7 @@ export default function ChatWindow({ conversationId }: Props) {
           })
         );
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
@@ -94,6 +88,13 @@ export default function ChatWindow({ conversationId }: Props) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text || loading) return;
+    await submitMessage(text);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -112,13 +113,15 @@ export default function ChatWindow({ conversationId }: Props) {
         return;
       }
       e.preventDefault();
-      handleSubmit(e as unknown as React.FormEvent);
+      const text = input.trim();
+      if (!text || loading) return;
+      submitMessage(text);
     }
   };
 
   return (
     <div className="flex flex-col h-full bg-white">
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+      <div role="log" aria-live="polite" className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
         {fetching ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-gray-400 text-sm animate-pulse">読み込み中...</p>
@@ -134,7 +137,7 @@ export default function ChatWindow({ conversationId }: Props) {
         ) : (
           messages.map((msg, i) => (
             <div
-              key={i}
+              key={`${msg.timestamp}-${msg.role}-${i}`}
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div

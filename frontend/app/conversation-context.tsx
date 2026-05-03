@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 
 interface ConversationContextType {
   currentId: string | undefined;
@@ -17,14 +17,10 @@ export function useConversation() {
 }
 
 export function ConversationProvider({ children }: { children: ReactNode }) {
-  const [currentId, setCurrentId] = useState<string | undefined>(undefined);
-
-  // ページ読み込み時にURLから初期IDを取得
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
-    if (id) setCurrentId(id);
-  }, []);
+  const [currentId, setCurrentId] = useState<string | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    return new URLSearchParams(window.location.search).get("id") ?? undefined;
+  });
 
   const handleSetCurrentId = (id: string | undefined) => {
     setCurrentId(id);
